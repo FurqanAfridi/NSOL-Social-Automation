@@ -51,8 +51,8 @@
         "operation": "append",
         "documentId": {
           "__rl": true,
-          "value": "17ED-N2W_TtLppjrSr4c5Cj8gdZb8YEHkvsbBek5Eea4",
-          "mode": "list",
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "expression",
           "cachedResultName": "NSOL CONTENT STRATEGY",
           "cachedResultUrl": "https://docs.google.com/spreadsheets/d/17ED-N2W_TtLppjrSr4c5Cj8gdZb8YEHkvsbBek5Eea4/edit?usp=drivesdk"
         },
@@ -165,7 +165,7 @@
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "b9TkdOSJ8gfE83NF",
+          "id": "{{ $env.N8N_GOOGLE_SHEETS_CREDENTIAL_ID }}",
           "name": "Google Sheets account"
         }
       }
@@ -175,8 +175,8 @@
         "operation": "update",
         "documentId": {
           "__rl": true,
-          "value": "17ED-N2W_TtLppjrSr4c5Cj8gdZb8YEHkvsbBek5Eea4",
-          "mode": "list",
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "expression",
           "cachedResultName": "NSOL CONTENT STRATEGY",
           "cachedResultUrl": "https://docs.google.com/spreadsheets/d/17ED-N2W_TtLppjrSr4c5Cj8gdZb8YEHkvsbBek5Eea4/edit?usp=drivesdk"
         },
@@ -297,7 +297,7 @@
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "b9TkdOSJ8gfE83NF",
+          "id": "{{ $env.N8N_GOOGLE_SHEETS_CREDENTIAL_ID }}",
           "name": "Google Sheets account"
         }
       }
@@ -428,8 +428,8 @@
       "parameters": {
         "documentId": {
           "__rl": true,
-          "value": "17ED-N2W_TtLppjrSr4c5Cj8gdZb8YEHkvsbBek5Eea4",
-          "mode": "list",
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "expression",
           "cachedResultName": "NSOL CONTENT STRATEGY",
           "cachedResultUrl": "https://docs.google.com/spreadsheets/d/17ED-N2W_TtLppjrSr4c5Cj8gdZb8YEHkvsbBek5Eea4/edit?usp=drivesdk"
         },
@@ -463,7 +463,7 @@
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "b9TkdOSJ8gfE83NF",
+          "id": "{{ $env.N8N_GOOGLE_SHEETS_CREDENTIAL_ID }}",
           "name": "Google Sheets account"
         }
       }
@@ -487,12 +487,12 @@
         "name": "={{$binary.visuals.fileName}}",
         "driveId": {
           "__rl": true,
-          "value": "=My Drive",
+          "value": "={{ $env.GOOGLE_DRIVE_ID || 'My Drive' }}",
           "mode": "id"
         },
         "folderId": {
           "__rl": true,
-          "value": "1s1OCz1Rg-1kCfuDKkJkrb8kb7ritVFkd",
+          "value": "={{ $env.GOOGLE_DRIVE_FOLDER_ID }}",
           "mode": "id"
         },
         "options": {}
@@ -507,7 +507,7 @@
       "name": "Upload images to drive",
       "credentials": {
         "googleDriveOAuth2Api": {
-          "id": "dHN7D6quu7nncgiV",
+          "id": "{{ $env.N8N_GOOGLE_DRIVE_CREDENTIAL_ID }}",
           "name": "Google Drive account"
         }
       }
@@ -517,8 +517,8 @@
         "operation": "appendOrUpdate",
         "documentId": {
           "__rl": true,
-          "value": "17ED-N2W_TtLppjrSr4c5Cj8gdZb8YEHkvsbBek5Eea4",
-          "mode": "list",
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "expression",
           "cachedResultName": "NSOL CONTENT STRATEGY",
           "cachedResultUrl": "https://docs.google.com/spreadsheets/d/17ED-N2W_TtLppjrSr4c5Cj8gdZb8YEHkvsbBek5Eea4/edit?usp=drivesdk"
         },
@@ -605,7 +605,7 @@
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "b9TkdOSJ8gfE83NF",
+          "id": "{{ $env.N8N_GOOGLE_SHEETS_CREDENTIAL_ID }}",
           "name": "Google Sheets account"
         }
       }
