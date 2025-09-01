@@ -1,0 +1,862 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "hour": 9
+            }
+          ]
+        }
+      },
+      "id": "6f74ad91-dd98-400f-91f2-aa1f8c71218d",
+      "name": "Daily Trigger (9 AM)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        256,
+        -88
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate 5 posts for the day\nconst posts = [];\nconst today = new Date();\nconst dayOfWeek = today.getDay();\n\nconst postingPlan = {\n  0: 'recap_light_content',\n  1: 'educational_thought_leadership', \n  2: 'tips_tricks_quick_wins',\n  3: 'promotional_service_highlight',\n  4: 'engagement_community',\n  5: 'thought_leadership_industry_trends',\n  6: 'motivational_personal_growth'\n};\n\nconst category = postingPlan[dayOfWeek] || 'general';\n\nconst categoryNames = {\n  'educational_thought_leadership': 'Educational / Thought Leadership',\n  'tips_tricks_quick_wins': 'Tips & Tricks / Quick Wins',\n  'promotional_service_highlight': 'Promotional / Service Highlight',\n  'engagement_community': 'Engagement / Community',\n  'thought_leadership_industry_trends': 'Thought Leadership / Industry Trends',\n  'motivational_personal_growth': 'Motivational / Personal Growth',\n  'recap_light_content': 'Recap / Light Content',\n  'general': 'General'\n};\n\nfor (let i = 0; i < 5; i++) {\n  posts.push({\n    category: category,\n    category_name: categoryNames[category],\n    dayName: today.toLocaleDateString('en-US', { weekday: 'long' }),\n    date: today.toISOString().split('T')[0],\n    post_number: i + 1\n  });\n}\n\nreturn posts;"
+      },
+      "id": "d2ab2fac-b883-43da-8c22-59b30486a7d1",
+      "name": "Generate Post Outline (5 posts)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        -280
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process all input responses from Gemini\nconst inputs = $input.all();\n\nif (!inputs || inputs.length === 0) {\n  // Return fallback if no inputs\n  return [{\n    idea: `NSOL ${$json?.category_name || 'Unknown'} - Post ${$json?.post_number || '1'}`,\n    caption: `🚀 Innovation drives everything we do at NSOL!`,\n    hashtags: '#AI #Automation #Innovation',\n    status: 'Error: No input data',\n    generated_at: new Date().toISOString()\n  }];\n}\n\n// Process each Gemini response\nconst results = [];\n\nfor (let i = 0; i < inputs.length; i++) {\n  const input = inputs[i];\n  \n  // Check if we have a valid Gemini response structure\n  if (!input || !input.json || !input.json.content || !input.json.content.parts || !input.json.content.parts[0]) {\n    results.push({\n      idea: `NSOL ${$json?.category_name || 'Unknown'} - Post ${$json?.post_number || i + 1}`,\n      caption: `🚀 Innovation drives everything we do at NSOL!`,\n      hashtags: '#AI #Automation #Innovation',\n      status: 'Error: Invalid Gemini response structure',\n      generated_at: new Date().toISOString()\n    });\n    continue;\n  }\n\n  const geminiResponse = input.json.content.parts[0].text;\n\n  if (!geminiResponse) {\n    results.push({\n      idea: `NSOL ${$json?.category_name || 'Unknown'} - Post ${$json?.post_number || i + 1}`,\n      caption: `🚀 Innovation drives everything we do at NSOL! Today we're focusing on ${$json?.category_name || 'AI'}.`,\n      hashtags: '#AI #Automation #Innovation #NSOL',\n      description: 'Auto-generated post',\n      status: 'Waiting for Review',\n      generated_at: new Date().toISOString()\n    });\n    continue;\n  }\n\n  try {\n    // Extract JSON from the Gemini response (handle both ```json and ``` markers)\n    const jsonMatch = geminiResponse.match(/```(?:json)?\\s*([\\s\\S]*?)\\s*```/);\n    \n    if (jsonMatch && jsonMatch[1]) {\n      const contentData = JSON.parse(jsonMatch[1].trim());\n      \n      // Ensure all required fields are present\n      const result = {\n        idea: contentData.idea || `NSOL ${$json?.category_name || 'Unknown'} - Post ${$json?.post_number || i + 1}`,\n        caption: contentData.caption || `🚀 Innovation drives everything we do at NSOL!`,\n        hashtags: contentData.hashtags || '#AI #Automation #Innovation',\n        description: typeof contentData.description === 'object' \n                      ? JSON.stringify(contentData.description) \n                      : contentData.description || 'Auto-generated post',\n        image_concept: typeof contentData.image_concept === 'object'\n                        ? JSON.stringify(contentData.image_concept)\n                        : contentData.image_concept || 'Modern office with AI technology',\n        date: $json?.date || new Date().toISOString().split('T')[0],\n        day: $json?.dayName || new Date().toLocaleDateString('en-US', { weekday: 'long' }),\n        category: $json?.category || 'ai',\n        category_name: $json?.category_name || 'AI',\n        status: 'Waiting for Review',\n        generated_at: new Date().toISOString(),\n        id: `post_${Date.now()}_${$json?.post_number || i + 1}`\n      };\n      \n      results.push(result);\n    } else {\n      throw new Error('No JSON found in Gemini response');\n    }\n  } catch (error) {\n    results.push({\n      idea: `NSOL ${$json?.category_name || 'Unknown'} - Post ${$json?.post_number || i + 1}`,\n      caption: `🚀 Innovation drives everything we do at NSOL! Today we're focusing on ${$json?.category_name || 'AI'}.`,\n      hashtags: '#AI #Automation #Innovation #NSOL #Technology',\n      description: 'Auto-generated post focusing on AI automation benefits',\n      image_concept: 'Modern office with AI technology',\n      date: $json?.date || new Date().toISOString().split('T')[0],\n      day: $json?.dayName || new Date().toLocaleDateString('en-US', { weekday: 'long' }),\n      category: $json?.category || 'ai',\n      category_name: $json?.category_name || 'AI',\n      status: 'Error: ' + error.message,\n      generated_at: new Date().toISOString(),\n      id: `post_${Date.now()}_${$json?.post_number || i + 1}`\n    });\n  }\n}\n\n// Return array of all processed results\nreturn results;"
+      },
+      "id": "c23e7d15-f5c5-403a-be6b-50cbd9ddfb03",
+      "name": "Parse Content Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        -280
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "17ED-N2W_TtLppjrSr4c5Cj8gdZb8YEHkvsbBek5Eea4",
+          "mode": "list",
+          "cachedResultName": "NSOL CONTENT STRATEGY",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/17ED-N2W_TtLppjrSr4c5Cj8gdZb8YEHkvsbBek5Eea4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1450147778,
+          "mode": "list",
+          "cachedResultName": "Ideas & Drafts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/17ED-N2W_TtLppjrSr4c5Cj8gdZb8YEHkvsbBek5Eea4/edit#gid=1450147778"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ new Date().toDateTime().plus(7,'days').format('yyyy-MM-dd')}}",
+            "Idea": "={{ $json.idea }}",
+            "Caption": "={{ $json.caption }}",
+            "Hashtags": "={{ $json.hashtags }}",
+            "Image Concept": "={{ $json.image_concept }}",
+            "Description": "={{ $json.description }}",
+            "Status (Waiting for Review/Approved/Rejected)": "Waiting for Review"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Idea",
+              "displayName": "Idea",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Caption",
+              "displayName": "Caption",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Hashtags",
+              "displayName": "Hashtags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Image Concept",
+              "displayName": "Image Concept",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Image Link",
+              "displayName": "Image Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status (Waiting for Review/Approved/Rejected)",
+              "displayName": "Status (Waiting for Review/Approved/Rejected)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "a2fa375a-9f68-44fa-9559-1bbe13a95dba",
+      "name": "Save to Ideas & Drafts",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1280,
+        -88
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "b9TkdOSJ8gfE83NF",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "17ED-N2W_TtLppjrSr4c5Cj8gdZb8YEHkvsbBek5Eea4",
+          "mode": "list",
+          "cachedResultName": "NSOL CONTENT STRATEGY",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/17ED-N2W_TtLppjrSr4c5Cj8gdZb8YEHkvsbBek5Eea4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1450147778,
+          "mode": "list",
+          "cachedResultName": "Ideas & Drafts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/17ED-N2W_TtLppjrSr4c5Cj8gdZb8YEHkvsbBek5Eea4/edit#gid=1450147778"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Idea": "={{ $json.name }}",
+            "Image Link": "={{ $json.webViewLink }}"
+          },
+          "matchingColumns": [
+            "Idea"
+          ],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Idea",
+              "displayName": "Idea",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Caption",
+              "displayName": "Caption",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Hashtags",
+              "displayName": "Hashtags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Image Concept",
+              "displayName": "Image Concept",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Image Link",
+              "displayName": "Image Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status (Waiting for Review/Approved/Rejected)",
+              "displayName": "Status (Waiting for Review/Approved/Rejected)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "99b289b4-4c69-44f2-bb98-359aa1704039",
+      "name": "Update Image Link",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        2176,
+        -352
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "b9TkdOSJ8gfE83NF",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log posting results\nconst postResult = $node['Posting of the day'].json;\n\nreturn {\n  post_id: $json.id,\n  platform: $json.platform,\n  status: postResult.exitCode === 0 ? 'Posted' : 'Failed',\n  output: postResult.stdout || postResult.stderr || '',\n  posted_at: new Date().toISOString()\n};"
+      },
+      "id": "393e3d79-3fe1-40cb-b756-c632e0d8cbf5",
+      "name": "Log Posting Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1504,
+        104
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_SHEET_ID }}",
+          "mode": "expression"
+        },
+        "sheetName": "Posting Results",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Post ID": "={{ $json.post_id }}",
+            "Platform": "={{ $json.platform }}",
+            "Status": "={{ $json.status }}",
+            "Output": "={{ $json.output }}",
+            "Posted At": "={{ $json.posted_at }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "bd2657e2-1cdb-435f-a55b-fc8ab88df28c",
+      "name": "Save Posting Result",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        1728,
+        104
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-pro",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-pro"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a creative social media manager for NSOL, an AI-driven automation company.\\n\\nGenerate a {{ $json.category_name }} social media post (post {{ $json.post_number }} of 5) for {{ $json.dayName }}.\\n\\nCreate:\\n1. A short idea/title (5-7 words)\\n2. An engaging caption (120-180 words) that's professional yet engaging\\n3. 10-15 relevant hashtags\\n4. Additional notes about context, audience, and tone\\n5. A detailed image concept for AI image generation (be specific about style, colors, elements)\\n\\nFocus on: AI, automation, innovation, business growth, and {{ $json.category_name }} themes.\\n\\nMake it suitable for LinkedIn, Instagram, and Facebook audiences.\\n\\nReturn in this exact JSON format:\\n{\\n  \\\"idea\\\": \\\"short title here\\\",\\n  \\\"caption\\\": \\\"your engaging caption here\\\",\\n  \\\"hashtags\\\": \\\"#hashtag1 #hashtag2 #hashtag3 etc\\\",\\n  \\\"description\\\": \\\"additional notes about context, audience, tone\\\",\\n  \\\"image_concept\\\": \\\"detailed description for image generation including style, colors, composition\\\"\\n}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        704,
+        -280
+      ],
+      "id": "29bad84b-092a-4a63-aa9c-a965ba33d904",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "PluRqus5QOrAqn14",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.0-flash-exp-image-generation",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.0-flash-exp-image-generation"
+        },
+        "prompt": "={{ $json.image_concept }}",
+        "options": {
+          "sampleCount": 1,
+          "binaryPropertyOutput": "visuals"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        -280
+      ],
+      "id": "bd274b62-21cd-4f8c-9c70-9bbf06e886d7",
+      "name": "Generate an image",
+      "retryOnFail": true,
+      "alwaysOutputData": false,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "PluRqus5QOrAqn14",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1504,
+        -352
+      ],
+      "id": "3cf8e503-b87d-4809-b8f6-5dff01633a6a",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "17ED-N2W_TtLppjrSr4c5Cj8gdZb8YEHkvsbBek5Eea4",
+          "mode": "list",
+          "cachedResultName": "NSOL CONTENT STRATEGY",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/17ED-N2W_TtLppjrSr4c5Cj8gdZb8YEHkvsbBek5Eea4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1450147778,
+          "mode": "list",
+          "cachedResultName": "Ideas & Drafts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/17ED-N2W_TtLppjrSr4c5Cj8gdZb8YEHkvsbBek5Eea4/edit#gid=1450147778"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status (Waiting for Review/Approved/Rejected)",
+              "lookupValue": "Approved"
+            }
+          ]
+        },
+        "combineFilters": "AND",
+        "options": {
+          "returnAllMatches": "returnAllMatches"
+        }
+      },
+      "id": "4ab48c9a-59ad-444d-af61-557012de80eb",
+      "name": "Check Approval Status",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        480,
+        104
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "b9TkdOSJ8gfE83NF",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nfor (const item of items) {\n  // Check if binary data exists\n  if (item.binary && item.binary.visuals) { // or item.binary.visuals\n    // Change ONLY the filename\n    item.binary.visuals.fileName = item.json.idea\n  }\n}\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1728,
+        -352
+      ],
+      "id": "25f45956-ed7a-4afb-80f7-ef1f99521aa4",
+      "name": "Rename"
+    },
+    {
+      "parameters": {
+        "inputDataFieldName": "visuals",
+        "name": "={{$binary.visuals.fileName}}",
+        "driveId": {
+          "__rl": true,
+          "value": "=My Drive",
+          "mode": "id"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1s1OCz1Rg-1kCfuDKkJkrb8kb7ritVFkd",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1952,
+        -352
+      ],
+      "id": "85056c15-a449-4266-819c-f9d1653020b7",
+      "name": "Upload images to drive",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "dHN7D6quu7nncgiV",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "17ED-N2W_TtLppjrSr4c5Cj8gdZb8YEHkvsbBek5Eea4",
+          "mode": "list",
+          "cachedResultName": "NSOL CONTENT STRATEGY",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/17ED-N2W_TtLppjrSr4c5Cj8gdZb8YEHkvsbBek5Eea4/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 306157264,
+          "mode": "list",
+          "cachedResultName": "To Publish",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/17ED-N2W_TtLppjrSr4c5Cj8gdZb8YEHkvsbBek5Eea4/edit#gid=306157264"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Final Caption": "={{ $json.Caption }}",
+            "Date": "={{ $json.Date }}",
+            "Final Hashtags": "={{ $json.Hashtags }}",
+            "Image Link": "={{ $json['Image Link'] }}",
+            "Platform": "Linkedin"
+          },
+          "matchingColumns": [
+            "Final Caption"
+          ],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Final Caption",
+              "displayName": "Final Caption",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Final Hashtags",
+              "displayName": "Final Hashtags",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Image Link",
+              "displayName": "Image Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "9c62c23e-42ed-4fc2-bea7-88da66a1fc51",
+      "name": "Update Publish Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        768,
+        104
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "b9TkdOSJ8gfE83NF",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ad3eca06-bc48-45dd-959c-5d2bfefc2530",
+              "leftValue": "={{ $json.Date }}",
+              "rightValue": "={{ new Date().toDateTime().format('yyyy-MM-dd')}}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1056,
+        104
+      ],
+      "id": "5d103a94-8ed8-4d8e-a26a-29c60096f280",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "# Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor item in _input.all():\n  item.json.myNewField = 1\nreturn _input.all()"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        104
+      ],
+      "id": "f4b3a1b6-b752-41c1-be58-f9df9c04f497",
+      "name": "Posting of the day"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Daily Trigger (9 AM)": {
+      "main": [
+        [
+          {
+            "node": "Generate Post Outline (5 posts)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check Approval Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Post Outline (5 posts)": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Content Response": {
+      "main": [
+        [
+          {
+            "node": "Save to Ideas & Drafts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generate an image",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Posting Result": {
+      "main": [
+        [
+          {
+            "node": "Save Posting Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Parse Content Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate an image": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Save to Ideas & Drafts": {
+      "main": [
+        []
+      ]
+    },
+    "Update Image Link": {
+      "main": [
+        []
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Rename",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Approval Status": {
+      "main": [
+        [
+          {
+            "node": "Update Publish Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rename": {
+      "main": [
+        [
+          {
+            "node": "Upload images to drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload images to drive": {
+      "main": [
+        [
+          {
+            "node": "Update Image Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Publish Sheet": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Posting of the day",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Posting of the day": {
+      "main": [
+        [
+          {
+            "node": "Log Posting Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c616fc23-422c-4e58-9ded-6a5b9d512056",
+  "meta": {
+    "instanceId": "d7c087d00a3c49812bcea73e211d0eb3ce71f492de1939744bdbeabd479523d0"
+  },
+  "id": "aZP68Av9oFXG4fGM",
+  "tags": [
+    {
+      "createdAt": "2025-08-31T12:36:24.900Z",
+      "updatedAt": "2025-08-31T12:36:24.900Z",
+      "id": "GN28iwGrjXfLaUpU",
+      "name": "Social Media"
+    },
+    {
+      "createdAt": "2025-08-31T12:36:24.917Z",
+      "updatedAt": "2025-08-31T12:36:24.917Z",
+      "id": "dF1YK9xQCEFFNUcu",
+      "name": "Automation"
+    },
+    {
+      "createdAt": "2025-08-31T12:36:24.926Z",
+      "updatedAt": "2025-08-31T12:36:24.926Z",
+      "id": "gm2WhnO1Vinvak9l",
+      "name": "AI Content"
+    }
+  ]
+}
